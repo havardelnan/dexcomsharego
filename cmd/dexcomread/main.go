@@ -32,5 +32,5 @@ func main() {
 
 	readings.Stats().Print()
 	fmt.Println("")
-	glucose.HourlyStats(shareclient.GetGlucoseReadings(1440, 288))
+	glucose.GetHourlyStats(shareclient.GetGlucoseReadings(1440, 288)).Print()
 }
