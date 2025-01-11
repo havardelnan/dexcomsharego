@@ -68,13 +68,6 @@ func (s *Sharesession) getSessionId() error {
 type ApiGlucoseReadings []ApiGlucoseReading
 
 type ApiGlucoseReading struct {
-	// {
-	// 	"WT": "Date(1736610842000)",
-	// 	"ST": "Date(1736610842000)",
-	// 	"DT": "Date(1736610842000+0100)",
-	// 	"Value": 187,
-	// 	"Trend": "Flat"
-	//   }
 	WT    string `json:"WT"`
 	ST    string `json:"ST"`
 	DT    string `json:"DT"`
@@ -136,10 +129,24 @@ func (s *Sharesession) GetGlucoseReading() GlucoseReading {
 		"applicationId": s.AuthConfig.ApplicationId,
 		"sessionId":     s.SessionId,
 		"minutes":       "1440",
-		"maxCount":      "2",
+		"maxCount":      "1",
 	}, &apireadings)
 
 	readings := apireadings.NewGlucoseReadings()
 
 	return readings[0]
+}
+
+func (s *Sharesession) GetGlucoseReadings(minutes int, maxcount int) GlucoseReadings {
+	var apireadings ApiGlucoseReadings
+	s.client.PostJSON("Publisher/ReadPublisherLatestGlucoseValues", map[string]string{
+		"applicationId": s.AuthConfig.ApplicationId,
+		"sessionId":     s.SessionId,
+		"minutes":       strconv.Itoa(minutes),
+		"maxCount":      strconv.Itoa(maxcount),
+	}, &apireadings)
+
+	readings := apireadings.NewGlucoseReadings()
+
+	return readings
 }

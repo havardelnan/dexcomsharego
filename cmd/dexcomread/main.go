@@ -22,4 +22,11 @@ func main() {
 	fmt.Println("Sample Time:", glucoreading.Time.String())
 	fmt.Println("Glucose:", glucoreading.Value.String())
 
+	readings := shareclient.GetGlucoseReadings(60, 10)
+	fmt.Print("\nLast hour:\n")
+	fmt.Print("Sample Time\tValue\tTrend\n")
+	for _, reading := range readings {
+		fmt.Printf("%s\t%s\t%s\n", reading.Time.Format("15:04 02.01.2006"), reading.Value.String(), reading.Trend)
+	}
+
 }
