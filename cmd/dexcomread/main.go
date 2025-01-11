@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/havardelnan/dexcomsharego/pkg/glucose"
 	"github.com/havardelnan/dexcomsharego/pkg/shareclient"
 )
 
@@ -19,14 +20,17 @@ func main() {
 	}
 
 	glucoreading := shareclient.GetGlucoseReading()
-	fmt.Println("Sample Time:", glucoreading.Time.Format("15:04 02.01.2006"))
+	fmt.Println("Last Sample:", glucoreading.Time.Format("15:04 02.01.2006"))
 	fmt.Println("Glucose:", glucoreading.Value.String())
 
-	readings := shareclient.GetGlucoseReadings(60, 10)
+	readings := shareclient.GetGlucoseReadings(60, 15)
 	fmt.Print("\nLast hour:\n")
 	fmt.Print("Time\tValue\t\tTrend\n")
 	for _, reading := range readings {
-		fmt.Printf("%s\t%s\t%s\n", reading.Time.Format("15:04"), reading.Value.String(), reading.Trend)
+		fmt.Printf("%s\t%s\t%s\n", reading.Time.Format("15:04:05"), reading.Value.String(), reading.Trend)
 	}
 
+	readings.Stats().Print()
+	fmt.Println("")
+	glucose.HourlyStats(shareclient.GetGlucoseReadings(1440, 288))
 }

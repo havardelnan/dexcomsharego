@@ -2,7 +2,9 @@ package glucose
 
 import (
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"time"
 )
 
@@ -24,4 +26,55 @@ func MgDlTommolL(val int) float64 {
 
 func (v GlucoseValue) String() string {
 	return fmt.Sprintf("%.1f mmol/L", v)
+}
+
+type GlucoseStats struct {
+	Samples int
+	Min     GlucoseValue
+	Max     GlucoseValue
+	Avg     GlucoseValue
+}
+
+func (s GlucoseStats) String() string {
+	return fmt.Sprintf("Samples: %d, Min: %s, Max: %s, Avg: %s\n", s.Samples, s.Min, s.Max, s.Avg)
+}
+
+func (s GlucoseStats) Print() {
+	fmt.Print(s.String())
+}
+
+func (r GlucoseReadings) Stats() GlucoseStats {
+	var min, max, avg GlucoseValue
+	min = 1000
+	max = 0
+	avg = 0
+	for _, reading := range r {
+		if reading.Value < min {
+			min = reading.Value
+		}
+		if reading.Value > max {
+			max = reading.Value
+		}
+		avg += reading.Value
+	}
+	avg = GlucoseValue(float64(avg) / float64(len(r)))
+	return GlucoseStats{Samples: len(r), Min: min, Max: max, Avg: avg}
+}
+
+func HourlyStats(r GlucoseReadings) {
+	hours := make(map[int64]GlucoseReadings)
+	for _, reading := range r {
+		timebyhour, _ := time.Parse("2006.01.02 15:00", reading.Time.Format("2006.01.02 15:00"))
+		hours[timebyhour.Unix()] = append(hours[timebyhour.Unix()], reading)
+	}
+
+	fmt.Print("Last 24 hours:\n")
+	fmt.Print("Hour\t\tMin\t\tMax\t\tAvg\n")
+	sortedhours := slices.Sorted(maps.Keys(hours))
+	for _, hour := range sortedhours {
+
+		fmt.Printf("%s\t%s\t%s\t%s\n", hours[hour][0].Time.Format("02.01 15:00"), hours[hour].Stats().Min, hours[hour].Stats().Max, hours[hour].Stats().Avg)
+	}
+	fmt.Println("")
+	r.Stats().Print()
 }
