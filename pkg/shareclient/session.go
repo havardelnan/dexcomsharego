@@ -1,11 +1,11 @@
 package shareclient
 
 import (
-	"fmt"
-	"math"
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/havardelnan/dexcomsharego/pkg/glucose"
 )
 
 type ShareAuthConfig struct {
@@ -75,28 +75,8 @@ type ApiGlucoseReading struct {
 	Trend string `json:"Trend"`
 }
 
-type GlucoseReadings []GlucoseReading
-
-type GlucoseReading struct {
-	Time  time.Time
-	Value GlucoseValue
-	Trend string
-}
-
-type GlucoseValue float64
-
-// String returns the string representation of the GlucoseValue in mmol/L
-func mgDlTommolL(val int) float64 {
-	mmol := float64(val) * 0.0555
-	return (math.Round(mmol*10) / 10)
-}
-
-func (v GlucoseValue) String() string {
-	return fmt.Sprintf("%.1f mmol/L", v)
-}
-
-func GlucoseValueFromAPI(apiValue int) GlucoseValue {
-	return GlucoseValue(mgDlTommolL(apiValue))
+func GlucoseValueFromAPI(apiValue int) glucose.GlucoseValue {
+	return glucose.GlucoseValue(glucose.MgDlTommolL(apiValue))
 }
 
 func timeFromApiString(apiTime string) time.Time {
@@ -106,47 +86,59 @@ func timeFromApiString(apiTime string) time.Time {
 	return time.Unix(int64(unixtime)/1000, 0)
 }
 
-func (r ApiGlucoseReading) NewGlucoseReading() GlucoseReading {
+func (r ApiGlucoseReading) NewGlucoseReading() glucose.GlucoseReading {
 
-	return GlucoseReading{
+	return glucose.GlucoseReading{
 		Time:  timeFromApiString(r.DT),
 		Value: GlucoseValueFromAPI(r.Value),
 		Trend: r.Trend,
 	}
 }
 
-func (r ApiGlucoseReadings) NewGlucoseReadings() GlucoseReadings {
-	var readings GlucoseReadings
+func (r ApiGlucoseReadings) NewGlucoseReadings() glucose.GlucoseReadings {
+	var readings glucose.GlucoseReadings
 	for _, reading := range r {
 		readings = append(readings, reading.NewGlucoseReading())
 	}
 	return readings
 }
 
-func (s *Sharesession) GetGlucoseReading() GlucoseReading {
-	var apireadings ApiGlucoseReadings
-	s.client.PostJSON("Publisher/ReadPublisherLatestGlucoseValues", map[string]string{
-		"applicationId": s.AuthConfig.ApplicationId,
-		"sessionId":     s.SessionId,
-		"minutes":       "1440",
-		"maxCount":      "1",
-	}, &apireadings)
-
-	readings := apireadings.NewGlucoseReadings()
-
+func (s *Sharesession) GetGlucoseReading() glucose.GlucoseReading {
+	readings := s.GetGlucoseReadings(1440, 1)
 	return readings[0]
 }
 
-func (s *Sharesession) GetGlucoseReadings(minutes int, maxcount int) GlucoseReadings {
+func (s *Sharesession) GetGlucoseReadings(minutes int, maxcount int) glucose.GlucoseReadings {
 	var apireadings ApiGlucoseReadings
+
 	s.client.PostJSON("Publisher/ReadPublisherLatestGlucoseValues", map[string]string{
 		"applicationId": s.AuthConfig.ApplicationId,
 		"sessionId":     s.SessionId,
-		"minutes":       strconv.Itoa(minutes),
-		"maxCount":      strconv.Itoa(maxcount),
+		"minutes":       minutesToApiString(minutes),
+		"maxCount":      maxcountToApiString(maxcount),
 	}, &apireadings)
 
 	readings := apireadings.NewGlucoseReadings()
 
 	return readings
+}
+
+func maxcountToApiString(maxcount int) string {
+	if maxcount > 288 {
+		return "288"
+	}
+	if maxcount < 1 {
+		return "1"
+	}
+	return strconv.Itoa(maxcount)
+}
+
+func minutesToApiString(minutes int) string {
+	if minutes > 1440 {
+		return "1440"
+	}
+	if minutes < 1 {
+		return "1"
+	}
+	return strconv.Itoa(minutes)
 }
